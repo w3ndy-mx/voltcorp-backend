@@ -5,9 +5,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Configuración de la URL de Ollama mediante variables de entorno
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434/api/generate";
-const MODELO_OLLAMA = process.env.OLLAMA_MODEL || "llama3.2";
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 const memoriaCache = {};
 
@@ -26,7 +25,7 @@ app.get('/api/detalle', async (req, res) => {
     }
 
     try {
-        console.log(`[OLLAMA BÚSQUEDA]: Analizando stock e información para '${nombrePieza}'...`);
+        console.log(`[GROQ BÚSQUEDA]: Analizando stock e información para '${nombrePieza}'...`);
         
         const prompt = `
         Analiza el componente de PC: "${nombrePieza}".
@@ -47,23 +46,25 @@ app.get('/api/detalle', async (req, res) => {
         }
         `;
 
-        const response = await fetch(OLLAMA_URL, {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
             body: JSON.stringify({
-                model: MODELO_OLLAMA,
-                prompt: prompt,
-                stream: false,
-                format: "json"
+                model: "llama-3.1-8b-instant",
+                messages: [
+                    { role: "user", content: prompt }
+                ],
+                response_format: { type: "json_object" }
             })
         });
 
-        if (!response.ok) throw new Error(`Ollama respondió con estado: ${response.status}`);
+        if (!response.ok) throw new Error(`Groq respondió con estado: ${response.status}`);
 
         const data = await response.json();
-        
-        let rawText = data.response.trim();
-        rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+        const rawText = data.choices[0].message.content.trim();
 
         let datosPieza;
         try {
@@ -83,20 +84,20 @@ app.get('/api/detalle', async (req, res) => {
             };
         }
 
-        // Corrección de las URLs encodeadas
+        // Construcción correcta de URLs para las tiendas
         datosPieza.tiendas = [
-            { nombre: "Amazon", precio: "Consultar oferta", url: `[https://www.amazon.com/s?k=$](https://www.amazon.com/s?k=$){encodeURIComponent(nombrePieza)}` },
-            { nombre: "Mercado Libre", precio: "Consultar oferta", url: `[https://listado.mercadolibre.com/$](https://listado.mercadolibre.com/$){encodeURIComponent(nombrePieza)}` }
+            { nombre: "Amazon", precio: "Consultar oferta", url: `https://www.amazon.com/s?k=${encodeURIComponent(nombrePieza)}` },
+            { nombre: "Mercado Libre", precio: "Consultar oferta", url: `https://listado.mercadolibre.com/${encodeURIComponent(nombrePieza)}` }
         ];
 
         memoriaCache[claveNormalizada] = datosPieza;
         return res.json(datosPieza);
 
     } catch (error) {
-        console.error("Error conectando con Ollama:", error.message);
+        console.error("Error conectando con Groq:", error.message);
         return res.json({
             especificaciones: "Sin datos disponibles.",
-            recomendacion: "Revisar conexión a Ollama.",
+            recomendacion: "Revisar API Key de Groq.",
             porqueComprar: "N/A",
             stock: 0,
             esPiezaDelDia: false,
