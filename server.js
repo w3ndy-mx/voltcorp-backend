@@ -56,7 +56,7 @@ app.get('/api/detalle', async (req, res) => {
                 'Authorization': `Bearer ${GROQ_API_KEY.trim()}`
             },
             body: JSON.stringify({
-                model: "llama3-8b-8192",
+                model: "llama-3.3-70b-versatile",
                 messages: [
                     { role: "system", content: "You are a JSON assistant. Respond ONLY in valid JSON format." },
                     { role: "user", content: prompt }
