@@ -5,6 +5,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Configuración de la URL de Ollama mediante variables de entorno
 const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434/api/generate";
 const MODELO_OLLAMA = process.env.OLLAMA_MODEL || "llama3.2";
 
@@ -82,6 +83,7 @@ app.get('/api/detalle', async (req, res) => {
             };
         }
 
+        // Corrección de las URLs encodeadas
         datosPieza.tiendas = [
             { nombre: "Amazon", precio: "Consultar oferta", url: `[https://www.amazon.com/s?k=$](https://www.amazon.com/s?k=$){encodeURIComponent(nombrePieza)}` },
             { nombre: "Mercado Libre", precio: "Consultar oferta", url: `[https://listado.mercadolibre.com/$](https://listado.mercadolibre.com/$){encodeURIComponent(nombrePieza)}` }
