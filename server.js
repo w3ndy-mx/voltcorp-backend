@@ -10,32 +10,18 @@ app.use(express.json());
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-// --------------------------------------------------
-// CONFIGURACIÓN DE PROVEEDOR DE IA
-// --------------------------------------------------
-// AI_PROVIDER = "groq"   -> usa Groq (recomendado en Render / producción)
-// AI_PROVIDER = "ollama" -> usa Ollama local (recomendado en desarrollo)
-// Si no se define, por defecto usa "groq".
 const AI_PROVIDER = (process.env.AI_PROVIDER || "groq").toLowerCase();
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.1";
 
-// Caché temporal en memoria
 const memoriaCache = {};
 
-// Caché de "piezas del día" (se regenera 1 vez cada 24h, no en cada visita)
 let cachePiezasDelDia = {
     fecha: null,
     datos: null
 };
 
-// ======================================================
-// CATÁLOGO DE COMPONENTES (catalogo-componentes.json)
-// ======================================================
-// Se carga UNA vez al iniciar el servidor, en memoria.
-// No usa IA: es el catálogo estructurado y curado que
-// alimenta el buscador y los filtros de la página.
 
 let catalogoComponentes = [];
 
@@ -54,16 +40,8 @@ function cargarCatalogo() {
     }
 }
 
-// Cargar el catálogo apenas arranca el servidor
 cargarCatalogo();
 
-// ======================================================
-// FUNCIONES DE IA (GROQ / OLLAMA)
-// ======================================================
-
-// --------------------------------------------------
-// Llamada a Groq (producción / Render)
-// --------------------------------------------------
 async function llamarGroq(mensajes) {
 
     if (!GROQ_API_KEY) {
@@ -105,9 +83,6 @@ async function llamarGroq(mensajes) {
     return rawText;
 }
 
-// --------------------------------------------------
-// Llamada a Ollama (desarrollo local)
-// --------------------------------------------------
 async function llamarOllama(mensajes) {
 
     const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
@@ -136,10 +111,6 @@ async function llamarOllama(mensajes) {
     return rawText;
 }
 
-// --------------------------------------------------
-// Selector de proveedor: usa el que esté configurado
-// en AI_PROVIDER (groq por defecto, ollama si lo pides)
-// --------------------------------------------------
 async function llamarIA(mensajes) {
 
     if (AI_PROVIDER === "ollama") {
@@ -151,17 +122,9 @@ async function llamarIA(mensajes) {
     return await llamarGroq(mensajes);
 }
 
-// ======================================================
-// API: OBTENER INFORMACIÓN DE UNA PIEZA
-// ======================================================
-
 app.get('/api/detalle', async (req, res) => {
 
     const nombrePieza = req.query.pieza;
-
-    // --------------------------------------------------
-    // Comprobar que se recibió una pieza
-    // --------------------------------------------------
 
     if (!nombrePieza) {
         return res.status(400).json({
